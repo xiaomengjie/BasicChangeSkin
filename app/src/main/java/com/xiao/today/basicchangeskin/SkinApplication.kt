@@ -1,5 +1,6 @@
 package com.xiao.today.basicchangeskin
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.pm.PackageManager
 import android.content.res.AssetManager
@@ -14,12 +15,19 @@ class SkinApplication: Application() {
 
     override fun onCreate() {
         super.onCreate()
+        loadSkinResource()
+    }
+
+    @SuppressLint("DiscouragedPrivateApi")
+    private fun loadSkinResource() {
         try {
             val apkFile = File(cacheDir, "app-debug.apk")
-            val assetManager = AssetManager::class.java.newInstance()
-            val addAssetPath = AssetManager::class.java.getDeclaredMethod("addAssetPath", String::class.java)
-            addAssetPath.invoke(assetManager, apkFile.absolutePath)
-            skinResource = Resources(assetManager, resources.displayMetrics, resources.configuration)
+            val clazz = AssetManager::class.java
+            val constructor = clazz.getConstructor()
+            val skinAssetManager = constructor.newInstance()
+            val addAssetPath = clazz.getDeclaredMethod("addAssetPath", String::class.java)
+            addAssetPath.invoke(skinAssetManager, apkFile.absolutePath)
+            skinResource = Resources(skinAssetManager, resources.displayMetrics, resources.configuration)
             val packageArchiveInfo = packageManager.getPackageArchiveInfo(
                 apkFile.absolutePath,
                 PackageManager.GET_ACTIVITIES
