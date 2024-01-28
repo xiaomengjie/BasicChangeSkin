@@ -1,11 +1,18 @@
 package com.xiao.today.basicchangeskin
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.Resources
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.LayoutInflater.Factory2
 import android.view.View
+import android.widget.Button
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -25,20 +32,83 @@ class MainActivity : AppCompatActivity() {
 
     private val skinMap = mutableMapOf<View, List<SkinBean>>()
 
+    private lateinit var skinApplication: SkinApplication
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        LayoutInflater.from(this).factory2 = object : Factory2{
+        setLayoutInflaterFactory()
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        skinApplication = application as SkinApplication
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            skinMap.forEach { map ->
+                map.value.forEach {
+                    changeSkin(map.key, it)
+                }
+            }
+        }, 3_000)
+    }
+
+    private fun changeSkin(view: View, bean: SkinBean) {
+        when(bean.attributeName){
+            "text" -> {
+                val skinPackageResourcesId =
+                    getSkinPackageResourcesId(skinApplication.skinResource, bean.value)
+                if (view is TextView){
+                    view.text = skinApplication.skinResource.getText(skinPackageResourcesId)
+                }
+            }
+            "textSize" -> {
+                val skinPackageResourcesId =
+                    getSkinPackageResourcesId(skinApplication.skinResource, bean.value)
+                if (view is TextView){
+                    val textSize =
+                        skinApplication.skinResource.getDimensionPixelSize(skinPackageResourcesId)
+                            .toFloat()
+                    view.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize)
+                }
+            }
+            "textColor" -> {
+                val skinPackageResourcesId =
+                    getSkinPackageResourcesId(skinApplication.skinResource, bean.value)
+                if (view is TextView){
+                    view.setTextColor(skinApplication.skinResource.getColor(skinPackageResourcesId))
+                }
+            }
+            "background" -> {
+                val skinPackageResourcesId =
+                    getSkinPackageResourcesId(skinApplication.skinResource, bean.value)
+                if (view is TextView){
+                    view.setBackgroundColor(skinApplication.skinResource.getColor(skinPackageResourcesId))
+                }
+            }
+        }
+    }
+
+    @SuppressLint("DiscouragedApi")
+    private fun getSkinPackageResourcesId(skinResources: Resources, originalResourcesId: Int): Int {
+        return skinResources.getIdentifier(
+            resources.getResourceEntryName(originalResourcesId),
+            resources.getResourceTypeName(originalResourcesId),
+            skinApplication.skinPackageName
+        )
+    }
+
+    private fun setLayoutInflaterFactory() {
+        LayoutInflater.from(this).factory2 = object : Factory2 {
             override fun onCreateView(
                 parent: View?,
                 name: String,
                 context: Context,
                 attrs: AttributeSet
             ): View? {
-                val view = if(-1 == name.indexOf('.')) {
+                val view = if (-1 == name.indexOf('.')) {
                     var view: View? = null
                     sClassPrefixList.forEach {
-                        if (view == null){
+                        if (view == null) {
                             view = createView(context, it + name, attrs)
-                        }else{
+                        } else {
                             return@forEach
                         }
                     }
@@ -55,8 +125,6 @@ class MainActivity : AppCompatActivity() {
             }
 
         }
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
     }
 
     private fun collectionAttributes(view: View?, viewName: String, attrs: AttributeSet) {
@@ -67,9 +135,8 @@ class MainActivity : AppCompatActivity() {
                 val value = attrs.getAttributeValue(i)
                 if (value.startsWith('@')){
                     val valueInt = value.drop(1).toInt()
-                    val valueName = resources.getResourceEntryName(valueInt)
                     skinBeanList.add(
-                        SkinBean(attributeName, valueName, valueInt)
+                        SkinBean(attributeName, valueInt)
                     )
                 }
             }
@@ -93,5 +160,5 @@ class MainActivity : AppCompatActivity() {
 }
 
 data class SkinBean(
-    val attributeName: String, val valueName: String, val value: Int
+    val attributeName: String, val value: Int
 )
